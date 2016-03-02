@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+      http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+
+	<servlet>
+		<servlet-name>app</servlet-name>
+		<servlet-class>com.zwn.servlet.HandlerServlet</servlet-class>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>app</servlet-name>
+		<url-pattern>/api</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>init</servlet-name>
+		<servlet-class>com.zwn.servlet.InitServlet</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
+	<servlet>
+		<servlet-name>manageAction</servlet-name>
+		<servlet-class>com.zwn.manage.servlet.ManageServlet</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>manageAction</servlet-name>
+		<url-pattern>/manage/action</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>manage</servlet-name>
+		<jsp-file>/WEB-INF/index.jsp</jsp-file>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>manage</servlet-name>
+		<url-pattern>/manage</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>file</servlet-name>
+		<servlet-class>com.zwn.manage.servlet.FileServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>file</servlet-name>
+		<url-pattern>/manage/file</url-pattern>
+	</servlet-mapping>
+	
+</web-app>
