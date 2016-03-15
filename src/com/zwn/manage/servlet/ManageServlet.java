@@ -26,7 +26,9 @@ public class ManageServlet extends HttpServlet {
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		String path = config.getServletContext().getRealPath("/");
-		config.getServletContext().setAttribute("root", getRootFolder(path));
+		FileSnapshot rootFolder = getRootFolder(path);
+		rootFolder.sortChildren();
+		config.getServletContext().setAttribute("root", rootFolder);
 	}
 	
 	@Override

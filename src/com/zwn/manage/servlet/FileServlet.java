@@ -21,7 +21,11 @@ import javax.servlet.http.HttpServletResponse;
 
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+
+import com.zwn.manage.FileSnapshot;
+import com.zwn.manage.FileWalker;
 
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
@@ -36,6 +40,10 @@ public class FileServlet extends HttpServlet {
 
 	private static Map<String, String> handlerMap = new HashMap<String, String>();
 
+	private static String SUCCESS = "Success";
+	
+	private static String FAILED = "Failed";
+	
 	static {
 		handlerMap.put("get", "getFileContent");
 		handlerMap.put("update", "updateFileContent");
@@ -43,6 +51,7 @@ public class FileServlet extends HttpServlet {
 		handlerMap.put("create", "createFile");
 		handlerMap.put("upload", "uploadFile");
 		handlerMap.put("download", "downloadFile");
+		handlerMap.put("refresh", "refresh");
 	}
 
 	@Override
@@ -53,10 +62,8 @@ public class FileServlet extends HttpServlet {
 		try {
 			request.setCharacterEncoding("utf-8");
 			response.setCharacterEncoding("utf-8");
-			logger.info("Call '" + methodName + "' Request " + ", filePath = "
-					+ filePath);
-			Method method = this.getClass().getMethod(handler,
-					HttpServletRequest.class, HttpServletResponse.class);
+			logger.info("Call '" + methodName + "' Request " + ", filePath = " + filePath);
+			Method method = this.getClass().getMethod(handler,HttpServletRequest.class, HttpServletResponse.class);
 			method.invoke(this, request, response);
 		} catch (NoSuchMethodException e) {
 			logger.error("Fail to get handler for method " + methodName, e);
@@ -74,7 +81,7 @@ public class FileServlet extends HttpServlet {
 			logger.error("Fail to excute handler method " + methodName, e);
 			e.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
-			
+
 		}
 	}
 
@@ -91,7 +98,7 @@ public class FileServlet extends HttpServlet {
 			} else {
 				writeTextFile(f, content);
 			}
-			writer.write("success");
+			writer.write(SUCCESS);
 		} catch (IOException e) {
 			logger.error(e);
 		} finally {
@@ -130,20 +137,22 @@ public class FileServlet extends HttpServlet {
 	}
 
 	public void deleteFile(HttpServletRequest request,HttpServletResponse response) {
+		FileSnapshot filess = (FileSnapshot) getServletContext().getAttribute("root");
 		String path = request.getParameter("filePath");
 		File f = new File(path);
 		PrintWriter writer = null;
 		try {
 			writer = response.getWriter();
-			if(!f.delete()){
-				logger.info("Fail to delete '"+f.getAbsolutePath()+"'");
-				writer.write("Failed");
-			}else{
-				writer.write("Success");
+			if (!f.delete()) {
+				logger.info("Fail to delete '" + f.getAbsolutePath() + "'");
+				writer.write(FAILED);
+			} else {
+				filess.removeByPath(path);
+				writer.write(SUCCESS);
 			}
-		}catch (IOException e) {
-			
-		}finally{
+		} catch (IOException e) {
+
+		} finally {
 			writer.close();
 		}
 	}
@@ -165,20 +174,22 @@ public class FileServlet extends HttpServlet {
 					writeTextFile(f, content);
 				}
 			}
-			writer.write("success");
+			writer.write(SUCCESS);
 		} catch (IOException e) {
 			logger.error("Failt to create file '" + path + "'", e);
+			writer.write(FAILED);
 		}
 	}
 
-	public void downloadFile(HttpServletRequest request,HttpServletResponse response) {
+	public void downloadFile(HttpServletRequest request,
+			HttpServletResponse response) {
 		String path = request.getParameter("filePath");
 		response.setContentType("text/plain");
 		try {
 			File f = new File(path);
 			FileInputStream in = new FileInputStream(f);
-			response.setHeader("Location",f.getName());
-	        response.setHeader("Content-Disposition", "attachment; filename=" + f.getName());
+			response.setHeader("Location", f.getName());
+			response.setHeader("Content-Disposition", "attachment; filename=" + f.getName());
 			ServletOutputStream outputStream = response.getOutputStream();
 			byte[] buffer = new byte[1024];
 			int i = -1;
@@ -195,6 +206,27 @@ public class FileServlet extends HttpServlet {
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.error("Failt to get ServletOutputStream", e);
+		}
+	}
+
+	public void refresh(HttpServletRequest request, HttpServletResponse response) {
+		String path = request.getParameter("filePath");
+		FileSnapshot root = (FileSnapshot) request.getServletContext().getAttribute("root");
+		FileSnapshot toWrite = null;
+		if(StringUtils.isEmpty(path)){
+			root.load();
+			toWrite = root;
+		}else{
+			toWrite = root.searchByPath(path);
+			toWrite.load();
+		}
+		PrintWriter writer = null;
+		try {
+			writer = response.getWriter();
+			writer.write(JSONObject.fromObject(toWrite).toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+			logger.error("Failt to get Response Writer", e);
 		}
 	}
 
@@ -245,8 +277,7 @@ public class FileServlet extends HttpServlet {
 			BASE64Encoder encoder = new BASE64Encoder();
 			ret = encoder.encode(data);
 		} catch (IOException e) {
-			logger.error("Fail to BASE64Encoder " + imgFile.getAbsolutePath(),
-					e);
+			logger.error("Fail to BASE64Encoder " + imgFile.getAbsolutePath(),e);
 		}
 		return ret;
 	}
